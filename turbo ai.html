@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Generator V4 - Turbo Mode</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+
+        :root {
+            --purple: #bd93f9;
+            --green: #50fa7b;
+            --red: #ff5555;
+            --bg: #0a0a12;
+            --card: #18182b;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #f8f8f2; display: flex; justify-content: center; padding: 20px; }
+        
+        .container { max-width: 850px; width: 100%; background: var(--card); border-radius: 20px; padding: 25px; box-shadow: 0 0 30px rgba(189, 147, 249, 0.1); border: 1px solid rgba(255,255,255,0.05); }
+        
+        h1 { font-family: 'Orbitron', sans-serif; text-align: center; color: white; font-size: 1.5rem; margin-bottom: 15px;}
+        h2 { text-align: center; color: var(--purple); font-size: 1rem; margin-bottom: 20px;}
+
+        input, textarea { width: 100%; padding: 15px; margin: 8px 0; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: white; font-size: 14px; outline: none; transition: 0.3s; }
+        input:focus, textarea:focus { border-color: var(--purple); box-shadow: 0 0 10px rgba(189, 147, 249, 0.2); }
+
+        button { width: 100%; padding: 15px; background: transparent; border: 1px solid var(--purple); color: var(--purple); border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.2s; margin-top: 10px; }
+        button:hover:not(:disabled) { background: var(--purple); color: #0a0a12; box-shadow: 0 0 20px rgba(189, 147, 249, 0.4); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; border-color: #444; color: #444; }
+
+        .btn-green { border-color: var(--green); color: var(--green); }
+        .btn-green:hover:not(:disabled) { background: var(--green); color: #0a0a12; box-shadow: 0 0 20px rgba(80, 250, 123, 0.4); }
+        .btn-red { border-color: var(--red); color: var(--red); }
+        .btn-red:hover { background: var(--red); color: white; }
+
+        /* چت باتون‌ها برای پرامپت سریع */
+        .quick-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        .quick-btn { width: 100%; padding: 8px; font-size: 12px; border: 1px solid rgba(255,255,255,0.1); color: #aaa; background: rgba(255,255,255,0.02); margin: 0; }
+        .quick-btn:hover { border-color: var(--green); color: white; background: rgba(80, 250, 123, 0.1); box-shadow: none; }
+
+        .auth-box { max-width: 400px; margin: 0 auto; display: block; }
+        .auth-box.hidden { display: none; }
+        .app-box { display: none; }
+        .app-box.active { display: block; }
+        .error { color: var(--red); text-align: center; display: none; margin: 10px 0; }
+
+        /* گالری */
+        #imageGallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; margin-top: 20px; }
+        .image-card { background: rgba(255,255,255,0.03); border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
+        .image-card img { width: 100%; height: 200px; object-fit: cover; display: block; }
+
+        /* تکنیک افزایش سرعت: لودینگ فقط یک خط */
+        #loadingStatus { text-align: center; padding: 10px; color: #666; display: none; margin-top: 5px; }
+
+        #nsfwModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        #nsfwModal.active { display: flex; }
+        .modal-content { background: var(--card); padding: 25px; border-radius: 15px; max-width: 500px; width: 90%; border: 1px solid var(--red); }
+        .modal-content h2 { color: var(--red); }
+        .quiz-option { display: block; text-align: left; padding: 8px; margin: 5px 0; cursor: pointer; border-radius: 5px; }
+        .quiz-option:hover { background: rgba(255,255,255,0.05); }
+        .quiz-option input { width: auto; margin-right: 10px; }
+        .flex-btn { display: flex; gap: 10px; margin-top: 15px; }
+        .flex-btn button { flex: 1; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- لاگین -->
+    <div id="authSection" class="auth-box">
+        <h1>⚡ Turbo AI</h1>
+        <h2>سریع‌ترین مولد تصویر</h2>
+        <div class="error" id="authError">اطلاعات اشتباه است</div>
+        <input type="text" id="loginUsername" placeholder="نام کاربری">
+        <input type="password" id="loginPassword" placeholder="رمز عبور">
+        <button onclick="handleLogin()">ورود آنی</button>
+        <button class="btn-green" onclick="switchAuthMode('register')" style="margin-top: 5px;">ثبت نام سریع</button>
+        <div id="registerSection" style="display: none; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
+            <h2>ثبت نام</h2>
+            <input type="text" id="regUsername" placeholder="نام کاربری">
+            <input type="password" id="regPassword" placeholder="رمز عبور">
+            <button onclick="handleRegister()" class="btn-green">ساخت حساب</button>
+            <button onclick="switchAuthMode('login')" style="margin-top: 5px;">بازگشت</button>
+        </div>
+    </div>
+
+    <!-- اپلیکیشن -->
+    <div id="appSection" class="app-box">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h1 style="margin:0; font-size:1.2rem;">⚡ Turbo AI</h1>
+            <button class="btn-red" onclick="handleLogout()" style="width: auto; padding: 5px 15px; margin: 0;">خروج</button>
+        </div>
+        
+        <div class="quick-buttons">
+            <button class="quick-btn" onclick="setPrompt('a futuristic cyberpunk city at night, neon lights, raining, 4k')">🌆 شهر سایبرپانک</button>
+            <button class="quick-btn" onclick="setPrompt('a majestic white wolf in a snowy forest, glowing eyes, hyper realistic')">🐺 گرگ برفی</button>
+            <button class="quick-btn" onclick="setPrompt('a beautiful samurai warrior standing on a mountain peak, sunset, cinematic')">🗡️ سامورایی</button>
+            <button class="quick-btn" onclick="setPrompt('an astronaut floating in deep space with colorful nebula, 8k')">🚀 فضانورد</button>
+        </div>
+
+        <textarea id="prompt" rows="2" placeholder="دستور خود را به انگلیسی بنویسید... (فقط انگلیسی)">a futuristic cyberpunk city at night, neon lights, raining, 4k</textarea>
+        <button id="generateBtn" onclick="processPrompt()" class="btn-green">⚡ تولید فوری (Turbo)</button>
+        
+        <div id="loadingStatus">⏳ در حال اتصال به سرعت نور... (صبر کنید)</div>
+        <div class="error" id="errorMessage">خطا در ارتباط! دوباره تلاش کنید.</div>
+        
+        <div style="text-align: center; margin-top: 10px; font-size: 12px; color: #666;">
+            <span id="statusMessage">وضعیت: <span style="color:#50fa7b;">عادی</span></span>
+        </div>
+
+        <div style="margin-top: 30px;">
+            <h3>📸 گالری</h3>
+            <div id="imageGallery"></div>
+        </div>
+    </div>
+</div>
+
+<!-- مودال امنیتی -->
+<div id="nsfwModal">
+    <div class="modal-content">
+        <h2>⚠️ احراز هویت</h2>
+        <p style="color: #aaa; margin-bottom: 15px;">محتوای حساس تشخیص داده شد. لطفا ۵ سوال را تایید کنید.</p>
+        <div id="quizContainer">
+            <label class="quiz-option"><input type="radio" name="q1" value="yes"> آیا بالای ۱۸ سال دارید؟</label>
+            <label class="quiz-option"><input type="radio" name="q2" value="yes"> آیا از محتوا آگاه هستید؟</label>
+            <label class="quiz-option"><input type="radio" name="q3" value="yes"> آیا داوطلبانه است؟</label>
+            <label class="quiz-option"><input type="radio" name="q4" value="yes"> آیا قوانین را می‌پذیرید؟</label>
+            <label class="quiz-option"><input type="radio" name="q5" value="yes"> آیا مسئولیت با شماست؟</label>
+        </div>
+        <div class="flex-btn">
+            <button onclick="verifyQuiz()" class="btn-green">تایید</button>
+            <button onclick="closeModal()" class="btn-red">لغو</button>
+        </div>
+        <div class="error" id="quizError" style="margin-top: 10px;">لطفا به تمام ۵ سوال پاسخ دهید (بله).</div>
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // سیستم لاگین و احراز هویت
+    // ==========================================
+    function switchAuthMode(m) { document.getElementById('registerSection').style.display = m === 'register' ? 'block' : 'none'; }
+    function handleRegister() {
+        const u = document.getElementById('regUsername').value.trim(), p = document.getElementById('regPassword').value.trim();
+        if(!u||!p) return alert("پر کنید");
+        let users = JSON.parse(localStorage.getItem('aiAppUsers')) || [];
+        if(users.find(x=>x.username===u)) return alert("تکراری است");
+        users.push({username:u, password:p});
+        localStorage.setItem('aiAppUsers', JSON.stringify(users));
+        alert("ثبت شد! حالا وارد شوید.");
+        switchAuthMode('login');
+    }
+    function handleLogin() {
+        const u = document.getElementById('loginUsername').value.trim(), p = document.getElementById('loginPassword').value.trim();
+        let users = JSON.parse(localStorage.getItem('aiAppUsers')) || [];
+        if(users.find(x=>x.username===u && x.password===p)) {
+            localStorage.setItem('aiAppCurrentUser', JSON.stringify({username:u}));
+            checkLogin();
+        } else document.getElementById('authError').style.display = 'block';
+    }
+    function handleLogout() { localStorage.removeItem('aiAppCurrentUser'); localStorage.removeItem('isVerifiedUser'); document.getElementById('imageGallery').innerHTML = ''; checkLogin(); }
+    function checkLogin() {
+        if (localStorage.getItem('aiAppCurrentUser')) {
+            document.getElementById('authSection').classList.add('hidden');
+            document.getElementById('appSection').classList.add('active');
+            checkVerification();
+        } else {
+            document.getElementById('authSection').classList.remove('hidden');
+            document.getElementById('appSection').classList.remove('active');
+        }
+    }
+    checkLogin();
+
+    // سیستم 5 سوال
+    let isVerified = false;
+    function checkVerification() {
+        isVerified = localStorage.getItem('isVerifiedUser') === 'true';
+        document.getElementById('statusMessage').innerHTML = `وضعیت: <span style="color:${isVerified ? '#bd93f9;' : '#50fa7b;'}">${isVerified ? 'احراز شده (دسترسی کامل)' : 'عادی (فیلتر)'}</span>`;
+    }
+    function processPrompt() {
+        const input = document.getElementById('prompt').value.toLowerCase();
+        if (["blood","gore","violent","nsfw","nude","sex","horror","kill","death"].some(w=>input.includes(w)) && !isVerified) {
+            document.getElementById('nsfwModal').classList.add('active');
+            document.getElementById('quizError').style.display = 'none';
+        } else {
+            generateImage(document.getElementById('prompt').value);
+        }
+    }
+    function verifyQuiz() {
+        if(!document.querySelector('input[name="q1"]:checked') || !document.querySelector('input[name="q2"]:checked') || !document.querySelector('input[name="q3"]:checked') || !document.querySelector('input[name="q4"]:checked') || !document.querySelector('input[name="q5"]:checked')) {
+            document.getElementById('quizError').style.display = 'block';
+            return;
+        }
+        isVerified = true;
+        localStorage.setItem('isVerifiedUser', 'true');
+        checkVerification();
+        document.getElementById('nsfwModal').classList.remove('active');
+        generateImage(document.getElementById('prompt').value);
+    }
+    function closeModal() { document.getElementById('nsfwModal').classList.remove('active'); }
+
+    // دکمه‌های سریع
+    function setPrompt(text) { document.getElementById('prompt').value = text; }
+
+    // ==========================================
+    // *** موتور فوق سریع (Turbo Mode) ***
+    // ==========================================
+    async function generateImage(promptText) {
+        const btn = document.getElementById('generateBtn');
+        const load = document.getElementById('loadingStatus');
+        const err = document.getElementById('errorMessage');
+        const gallery = document.getElementById('imageGallery');
+
+        btn.disabled = true;
+        btn.innerText = "⏳ تولید در حال انجام...";
+        load.style.display = 'block';
+        err.style.display = 'none';
+
+        try {
+            // ** تکنیک سرعت بالا: استفاده از یک تکنیک پیش‌لود با تگ IMG **
+            // ما آدرس را مستقیم به src می‌دهیم تا مرورگر همزمان با دانلود شروع به نمایش کند
+            const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptText)}?width=1024&height=1024&model=flux&nologin=true`;
+            
+            const card = document.createElement('div');
+            card.className = 'image-card';
+            // اضافه کردن onLoad برای مخفی کردن لودینگ وقتی عکس لود شد
+            card.innerHTML = `
+                <img src="${url}" alt="AI Image" onload="document.getElementById('loadingStatus').style.display='none'; document.getElementById('generateBtn').disabled=false; document.getElementById('generateBtn').innerText='⚡ تولید فوری (Turbo)';">
+                <div style="padding:10px; font-size:11px; color:#666; text-align:center;">${promptText.substring(0, 30)}...</div>
+            `;
+            gallery.prepend(card);
+
+            // برای مواقعی که عکس خیلی سریع لود نشد، یک تایمر امنیتی برای حذف لودینگ می‌گذاریم
+            setTimeout(() => {
+                if(load.style.display !== 'none') {
+                    load.style.display = 'none';
+                    btn.disabled = false;
+                    btn.innerText = "⚡ تولید فوری (Turbo)";
+                }
+            }, 8000); // بعد از 8 ثانیه لودینگ را مخفی کن
+
+        } catch (error) {
+            load.style.display = 'none';
+            btn.disabled = false;
+            btn.innerText = "⚡ تولید فوری (Turbo)";
+            err.style.display = 'block';
+            setTimeout(() => { err.style.display = 'none'; }, 4000);
+        }
+    }
+</script>
+</body>
+</html>
